@@ -43,6 +43,7 @@ def test_mock_generation():
 
 def test_bson_generation():
     import bson
+    import os
     payload = {
         "models": {
             "User": {
@@ -56,15 +57,27 @@ def test_bson_generation():
     }
     response = client.post("/mock/inferred/bson", json=payload)
     assert response.status_code == 200
-    assert response.headers["content-type"] == "application/bson"
     
-    # BSON returns raw bytes
-    raw_data = response.content
+    # Check that it returns a JSON response with file_path
+    data = response.json()
+    assert "file_path" in data
+    assert "successfully" in data["message"]
+    
+    file_path = data["file_path"]
+    assert os.path.exists(file_path)
+    
+    # Read and decode the BSON file
+    with open(file_path, "rb") as f:
+        raw_data = f.read()
+    
     decoded_data = bson.BSON.decode(raw_data)
     
     assert "User" in decoded_data
     assert len(decoded_data["User"]) == 2
     assert isinstance(decoded_data["User"][0]["user_id"], int)
+    
+    # Clean up
+    os.remove(file_path)
 
 if __name__ == "__main__":
     test_mock_generation()

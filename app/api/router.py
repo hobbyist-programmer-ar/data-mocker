@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, Body, Response
+from fastapi import APIRouter, HTTPException, Body
 from typing import Any, Dict, List
 from pydantic import BaseModel, Field
 import bson
+import os
+import time
 from app.core.generator import generate_mock_models
 from app.core.explicit_generator import generate_explicit_models
 
@@ -29,11 +31,11 @@ async def generate_mock_data(request: MockRequest = Body(...)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/mock/inferred/bson")
+@router.post("/mock/inferred/bson", response_model=Dict[str, str])
 async def generate_mock_data_bson(request: MockRequest = Body(...)):
     """
     Generate mock data based on provided JSON templates using heuristic inference and cross-references.
-    Returns the payload as a BSON binary encoded file.
+    Writes the BSON binary encoded data to a local file and returns the file path.
     """
     if not request.models:
         raise HTTPException(status_code=400, detail="Models dictionary cannot be empty")
@@ -42,7 +44,14 @@ async def generate_mock_data_bson(request: MockRequest = Body(...)):
         configs = {name: {"count": conf.count, "template": conf.template} for name, conf in request.models.items()}
         result = generate_mock_models(configs)
         bson_data = bson.BSON.encode(result)
-        return Response(content=bson_data, media_type="application/bson")
+        
+        filename = f"mock_inferred_{int(time.time())}.bson"
+        file_path = os.path.abspath(filename)
+        
+        with open(file_path, "wb") as f:
+            f.write(bson_data)
+            
+        return {"message": "BSON file generated successfully", "file_path": file_path}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -61,11 +70,11 @@ async def generate_explicit_mock_data(request: MockRequest = Body(...)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.post("/mock/explicit/bson")
+@router.post("/mock/explicit/bson", response_model=Dict[str, str])
 async def generate_explicit_mock_data_bson(request: MockRequest = Body(...)):
     """
     Generate mock data strictly adhering to explicitly defined string format rules (e.g. DECIMAL2).
-    Returns the payload as a BSON binary encoded file.
+    Writes the BSON binary encoded data to a local file and returns the file path.
     """
     if not request.models:
         raise HTTPException(status_code=400, detail="Models dictionary cannot be empty")
@@ -74,7 +83,14 @@ async def generate_explicit_mock_data_bson(request: MockRequest = Body(...)):
         configs = {name: {"count": conf.count, "template": conf.template} for name, conf in request.models.items()}
         result = generate_explicit_models(configs)
         bson_data = bson.BSON.encode(result)
-        return Response(content=bson_data, media_type="application/bson")
+        
+        filename = f"mock_explicit_{int(time.time())}.bson"
+        file_path = os.path.abspath(filename)
+        
+        with open(file_path, "wb") as f:
+            f.write(bson_data)
+            
+        return {"message": "BSON file generated successfully", "file_path": file_path}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

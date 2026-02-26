@@ -95,6 +95,41 @@ If you want to view a valid body format beforehand, simply call the sample GET e
 - `GET /sample/inferred`
 - `GET /sample/explicit`
 
+### BSON Export for MongoDB
+Both the inferred and explicit generators support saving data directly to MongoDB's native **BSON** binary format.
+
+To save a BSON file, append `/bson` to either generating endpoint:
+- `POST /mock/inferred/bson`
+- `POST /mock/explicit/bson`
+
+These endpoints will generate the mocked data, write it to a `.bson` file in the same directory where the API server is running, and return a JSON object containing the absolute path to that file.
+
+```bash
+curl -X POST http://127.0.0.1:8000/mock/explicit/bson \
+  -H "Content-Type: application/json" \
+  -d '{
+        "models": {
+          "User": {
+            "count": 5,
+            "template": {
+              "id": "UUID",
+              "score": "INTEGER"
+            }
+          }
+        }
+      }'
+```
+
+**Response output:**
+```json
+{
+  "message": "BSON file generated successfully",
+  "file_path": "/path/to/data-mocker/mock_explicit_1684342412.bson"
+}
+```
+
+You can then import this local file directly into your MongoDB cluster using tools like `mongorestore` or `bsondump`!
+
 ### Advanced: Related Data Mocking
 You can generate multiple collections of mocked data that reference each other. If a field should reference a generated item from another model, use `"$ref:ModelName.field_name"`. 
 
